@@ -5,41 +5,124 @@
   <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no" />
   <title>Agrow</title>
 
+  <!-- ArcGIS JS CSS -->
   <link rel="stylesheet" href="https://js.arcgis.com/4.26/esri/themes/light/main.css" />
-  <link rel="stylesheet" href="css/style.css" />
   <script src="https://js.arcgis.com/4.26/"></script>
+
+  <style>
+    html, body {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+      font-family: Arial, sans-serif;
+    }
+
+    #appContainer {
+      display: flex;
+      height: 100%;
+      width: 100%;
+    }
+
+    /* sidebar */
+    #sidebar {
+      width: 280px;
+      padding: 15px;
+      background-color: #f7f7f7;
+      border-right: 1px solid #ddd;
+      overflow-y: auto;
+    }
+
+    #sidebar h2 {
+      margin-top: 0;
+    }
+
+    #sidebar label {
+      font-size: 14px;
+      margin-top: 10px;
+      display: block;
+    }
+
+    #sidebar select {
+      width: 100%;
+      padding: 6px;
+      margin-top: 5px;
+    }
+
+    #clearFilters {
+      margin-top: 15px;
+      width: 100%;
+      padding: 8px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    #clearFilters:hover {
+      background-color: #45a049;
+    }
+
+    /* map */
+    #viewDiv {
+      flex: 1;
+    }
+
+    /* mobile */
+    @media (max-width: 768px) {
+      #appContainer {
+        flex-direction: column;
+      }
+
+      #sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+      }
+
+      #viewDiv {
+        height: 70%;
+      }
+    }
+  </style>
 </head>
 
 <body>
   <div id="appContainer">
+
+    <!-- Sidebar Filters -->
     <div id="sidebar">
-      <h2>Agrow</h2>
+      <h2>Agrow Filters</h2>
 
-      <div class="filter-section">
-        <h3>Filters</h3>
+      <label>Observation Type</label>
+      <select id="obsFilter">
+        <option value="">All</option>
+      </select>
 
-        <label>Observation Type</label>
-        <select id="obsFilter">
-          <option value="">All</option>
-        </select>
+      <label>Status</label>
+      <select id="statusFilter">
+        <option value="">All</option>
+      </select>
 
-        <label>Status</label>
-        <select id="statusFilter">
-          <option value="">All</option>
-        </select>
+      <label>Severity</label>
+      <select id="severityFilter">
+        <option value="">All</option>
+      </select>
 
-        <label>Severity</label>
-        <select id="severityFilter">
-          <option value="">All</option>
-        </select>
+      <label>Crop Type</label>
+      <select id="cropFilter">
+        <option value="">All</option>
+      </select>
 
-        <button id="clearFilters">Clear Filters</button>
-      </div>
+      <button id="clearFilters">Clear Filters</button>
     </div>
 
+    <!-- Map -->
     <div id="viewDiv"></div>
+
   </div>
 
+  <!-- main JS -->
   <script src="js/main.js"></script>
 </body>
 </html>
