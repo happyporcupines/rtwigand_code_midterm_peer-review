@@ -61,21 +61,73 @@ require([
 
   // make points easier to see on imagery
   var fieldDataLayer = new FeatureLayer({
-    url: fieldDataUrl,
-    title: "Field Data",
-    outFields: ["*"],
-    renderer: {
-      type: "simple",
-      symbol: {
-        type: "simple-marker",
-        style: "circle",
-        size: 10,
-        color: [255, 60, 60, 1],
-        outline: { color: [255, 255, 255, 1], width: 1 }
-      }
+  url: fieldDataUrl,
+  title: "Field Data",
+  outFields: ["*"],
+
+  // color by status + size by severity
+  renderer: {
+    type: "unique-value",
+    field: "status",
+
+    defaultSymbol: {
+      type: "simple-marker",
+      style: "circle",
+      size: 10,
+      color: [120,120,120],
+      outline: { color: [255,255,255], width: 1 }
     },
-    popupEnabled: true,
-    popupTemplate: {
+
+    uniqueValueInfos: [
+      {
+        value: "Open",
+        symbol: {
+          type: "simple-marker",
+          color: [255,80,80],
+          outline: { color:[255,255,255], width:1 }
+        }
+      },
+      {
+        value: "In Progress",
+        symbol: {
+          type: "simple-marker",
+          color: [255,190,80],
+          outline: { color:[255,255,255], width:1 }
+        }
+      },
+      {
+        value: "Monitoring",
+        symbol: {
+          type: "simple-marker",
+          color: [100,180,255],
+          outline: { color:[255,255,255], width:1 }
+        }
+      },
+      {
+        value: "Closed",
+        symbol: {
+          type: "simple-marker",
+          color: [120,210,120],
+          outline: { color:[255,255,255], width:1 }
+        }
+      }
+    ],
+
+    visualVariables: [
+      {
+        type: "size",
+        field: "severity",
+        stops: [
+          { value: 1, size: 8 },
+          { value: 3, size: 14 },
+          { value: 5, size: 20 }
+        ]
+      }
+    ]
+  },
+
+  popupEnabled: true,
+  popupTemplate: {
       title: "{title}",
       content: [
         {
