@@ -219,9 +219,26 @@ view.when(function () {
 
   view.ui.add(layersExpand, "top-left");
 
-  var editor = new Editor({
-    view: view
-  });
+  // editor widget (I’m hiding acres so it doesn’t get typed in)
+var editor = new Editor({
+  view: view,
+  layerInfos: [
+    {
+      layer: usersLandLayer,
+      formTemplate: {
+        elements: [
+          { type: "field", fieldName: "land_name", label: "Land Name" },
+          { type: "field", fieldName: "land_owner", label: "Owner" },
+          { type: "field", fieldName: "crop_type", label: "Crop Type" }
+          // acres is calculated, so it’s not on the form
+        ]
+      }
+    },
+    {
+      layer: fieldDataLayer
+    }
+  ]
+});
 
   var editorExpand = new Expand({
     view: view,
