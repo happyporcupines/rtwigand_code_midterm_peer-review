@@ -314,42 +314,65 @@ view.ui.add(editorExpand, "top-left");
     openEditorForLayer(usersLandLayer);
   });
 
-  // auto calculate acres whenever a polygon is added
-usersLandLayer.on("edits", function (event) {
+  // ----------------------------------------------------
+  // auto-calc acres after a land polygon is saved
+  // ----------------------------------------------------
+  usersLandLayer.on("edits", function (evt) {
 
-  // only run if new polygons were created
-  if (event.addedFeatures.length > 0) {
+  // only care about new polygons being added
+  if (!evt || !evt.addedFeatures || evt.addedFeatures.length === 0) return;
 
-    event.addedFeatures.forEach(function (feature) {
+  // grab objectIds of the new features
+  var ids = evt.addedFeatures
+    .map(function (f) { return f.objectId; })
+    .filter(function (id) { return id !== null && id !== undefined; });
 
-      // grab the polygon geometry
-      var geom = feature.geometry;
+  if (ids.length === 0) return;
 
-      // calculate geodesic area in square meters
-      var sqMeters = geometryEngine.geodesicArea(geom, "square-meters");
+  // query the saved feature so the geometry is correct
+  usersLandLayer.queryFeatures({
+    objectIds: ids,
+    returnGeometry: true,
+    outFields: [usersLandLayer.objectIdField]
+  }).then(function (res) {
+
+    if (!res.features || res.features.length === 0) return;
+
+    var updates = res.features.map(function (feat) {
+
+      if (!feat.geometry) return null;
+
+      // calculate area in square meters
+      var sqm = Math.abs(
+        geometryEngine.geodesicArea(feat.geometry, "square-meters")
+      );
 
       // convert to acres
-      var acres = Math.abs(sqMeters) * 0.000247105;
+      var acres = sqm / 4046.8564224;
 
-      // round to 2 decimals
+      // round for cleaner popup value
       acres = Math.round(acres * 100) / 100;
 
-      // get the correct object ID field name automatically
       var oidField = usersLandLayer.objectIdField;
 
       var attrs = {};
-      attrs[oidField] = feature.objectId;
+      attrs[oidField] = feat.attributes[oidField];
       attrs.acres = acres;
 
-      // update the feature with the acres value
-      usersLandLayer.applyEdits({
-        updateFeatures: [{
-          attributes: attrs
-        }]
-      });
+      return { attributes: attrs };
 
+    }).filter(Boolean);
+
+    if (updates.length === 0) return;
+
+    // update the acres field on the new polygon
+    return usersLandLayer.applyEdits({
+      updateFeatures: updates
     });
-  }
+
+  }).catch(function (err) {
+    console.log("acres calc failed", err);
+  });
 
 });
 
