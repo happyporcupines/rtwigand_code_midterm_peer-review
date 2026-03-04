@@ -7,6 +7,7 @@ require([
 
   "esri/widgets/Search",
   "esri/widgets/Locate",
+  "esri/Basemap",
   "esri/widgets/BasemapGallery",
   "esri/widgets/LayerList",
   "esri/widgets/Editor",
@@ -20,6 +21,7 @@ require([
   FeatureLayer,
   Search,
   Locate,
+  Basemap,
   BasemapGallery,
   LayerList,
   Editor,
@@ -183,11 +185,7 @@ require([
   
 // basemap gallery (only imagery + topo)
 var basemapGallery = new BasemapGallery({
-  view: view,
-  source: [
-    { basemap: "satellite", title: "Imagery" },
-    { basemap: "topo", title: "Topographic" }
-  ]
+  view: view
 });
 
 var basemapExpand = new Expand({
@@ -197,6 +195,16 @@ var basemapExpand = new Expand({
 });
 
 view.ui.add(basemapExpand, "top-left");
+
+// fix basemap white-screen + thumbnails
+view.when(function () {
+  Promise.all([
+    Basemap.fromId("arcgis-imagery"),
+    Basemap.fromId("arcgis-topographic")
+  ]).then(function (basemaps) {
+    basemapGallery.source = basemaps;
+  });
+});
 
   var layerList = new LayerList({
     view: view
