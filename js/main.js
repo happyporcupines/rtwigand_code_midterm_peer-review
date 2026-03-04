@@ -128,13 +128,28 @@ require([
   // ----------------------------------------------------
   // widgets: left side (basemap, layers, editor)
   // ----------------------------------------------------
-  var basemapGallery = new BasemapGallery({
-    view: view,
-    source: [
-      { portalItem: { id: "10df2279f9684e4a9f6a7f08febac2a9" } }, // World Imagery
-      { portalItem: { id: "1b243539f4514b6ba35e7d995890db1d" } }  // World Topographic
-    ]
+  // basemap picker (just imagery + topo)
+var basemapGallery = new BasemapGallery({
+  view: view
+});
+
+view.when(function () {
+  Promise.all([
+    Basemap.fromId("arcgis-imagery"),
+    Basemap.fromId("arcgis-topographic")
+  ]).then(function (basemaps) {
+    basemapGallery.source = basemaps;
   });
+});
+
+var basemapExpand = new Expand({
+  view: view,
+  content: basemapGallery,
+  expandTooltip: "Basemaps",
+  collapseTooltip: "Basemaps"
+});
+
+view.ui.add(basemapExpand, "top-left");
 
   var basemapExpand = new Expand({
     view: view,
