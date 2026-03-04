@@ -1,483 +1,313 @@
-// agrow midterm project
-// map + hosted layers + filters + buttons for adding points and land polygons
-
 require([
   "esri/config",
   "esri/Map",
   "esri/views/MapView",
 
   "esri/layers/FeatureLayer",
-  "esri/Basemap",
 
   "esri/widgets/Search",
   "esri/widgets/Locate",
-  "esri/widgets/Zoom",
-
   "esri/widgets/BasemapGallery",
   "esri/widgets/LayerList",
   "esri/widgets/Editor",
   "esri/widgets/Expand",
 
-  // temp draw layer + sketch tool
-  "esri/layers/GraphicsLayer",
-  "esri/widgets/Sketch/SketchViewModel",
-  "esri/Graphic",
-
-  "esri/symbols/SimpleMarkerSymbol",
-  "esri/renderers/SimpleRenderer"
+  "esri/geometry/geometryEngine"
 ], function (
   esriConfig,
   Map,
   MapView,
-
   FeatureLayer,
-  Basemap,
-
   Search,
   Locate,
-  Zoom,
-
   BasemapGallery,
   LayerList,
   Editor,
   Expand,
-
-  GraphicsLayer,
-  SketchViewModel,
-  Graphic,
-
-  SimpleMarkerSymbol,
-  SimpleRenderer
+  geometryEngine
 ) {
 
-  // api key for arcgis js
-  esriConfig.apiKey = "AAPTxy8BH1VEsoebNVZXo8HurEzkBozXZgPgjPozCzklawWD863C9mArHp4QeXfLaiy8L2BJTmm_eFlkRBmh-rS8f86DIaVxCZv1qDyzDjRyrQtKAoG97CplbDXiwWMA2bYqtEAxH9-MHlA3tDGSjUp93BMOHIaqXguOZxzW8cFVKszpoaoEbOPaECd9FiSLY6Rg-2FBhrb9bssxhS2Mh6EcsLusRR-qwO3qSJK5S8_0-lU3r-pdC0akyfo2hyekjELXAT1_Mj7DoXAA";
+  // ----------------------------------------------------
+  // quick settings
+  // ----------------------------------------------------
+  esriConfig.apiKey = "PASTE_YOUR_KEY_HERE";
 
-  // hosted layers
-  var usersLandUrl =
-    "https://services.arcgis.com/HRPe58bUyBqyyiCt/arcgis/rest/services/Users_Land/FeatureServer/0";
+  // hosted layers (you already made these)
+  var usersLandUrl = "https://services.arcgis.com/HRPe58bUyBqyyiCt/arcgis/rest/services/Users_Land/FeatureServer/0";
+  var fieldDataUrl  = "https://services.arcgis.com/HRPe58bUyBqyyiCt/arcgis/rest/services/field_data/FeatureServer/0";
 
-  var fieldDataUrl =
-    "https://services.arcgis.com/HRPe58bUyBqyyiCt/arcgis/rest/services/field_data/FeatureServer/0";
-
-  // map start
-  var map = new Map({
-    basemap: "arcgis-imagery"
-  });
-
-  // land polygons layer
+  // ----------------------------------------------------
+  // layers
+  // ----------------------------------------------------
   var usersLandLayer = new FeatureLayer({
     url: usersLandUrl,
     title: "My Land",
     outFields: ["*"],
+    popupEnabled: true,
     popupTemplate: {
       title: "{land_name}",
-      content: [{
-        type: "fields",
-        fieldInfos: [
-          { fieldName: "land_owner", label: "Owner" },
-          { fieldName: "crop_type", label: "Crop Type" },
-          { fieldName: "acres", label: "Acres" }
-        ]
-      }]
+      content: [
+        {
+          type: "fields",
+          fieldInfos: [
+            { fieldName: "land_owner", label: "Owner" },
+            { fieldName: "crop_type", label: "Crop Type" },
+            { fieldName: "acres", label: "Acres" }
+          ]
+        }
+      ]
     }
   });
 
-  // point layer (made symbol brighter so it shows on imagery)
-  var pointSym = new SimpleMarkerSymbol({
-    style: "circle",
-    size: 10,
-    color: [0,170,255,1],
-    outline: { color: [255,255,255,1], width: 1.5 }
-  });
-
+  // make points easier to see on imagery
   var fieldDataLayer = new FeatureLayer({
     url: fieldDataUrl,
     title: "Field Data",
     outFields: ["*"],
-    renderer: new SimpleRenderer({ symbol: pointSym }),
+    renderer: {
+      type: "simple",
+      symbol: {
+        type: "simple-marker",
+        style: "circle",
+        size: 10,
+        color: [255, 60, 60, 1],
+        outline: { color: [255, 255, 255, 1], width: 1 }
+      }
+    },
+    popupEnabled: true,
     popupTemplate: {
       title: "{title}",
-      content: [{
-        type: "fields",
-        fieldInfos: [
-          { fieldName: "obs_type", label: "Observation Type" },
-          { fieldName: "status", label: "Status" },
-          { fieldName: "severity", label: "Severity" },
-          { fieldName: "crop_type", label: "Crop Type" },
-          { fieldName: "obs_notes", label: "Notes" }
-        ]
-      }]
+      content: [
+        {
+          type: "fields",
+          fieldInfos: [
+            { fieldName: "obs_type", label: "Observation Type" },
+            { fieldName: "status", label: "Status" },
+            { fieldName: "severity", label: "Severity" },
+            { fieldName: "crop_type", label: "Crop Type" },
+            { fieldName: "obs_notes", label: "Notes" }
+          ]
+        }
+      ]
     }
   });
 
-  map.addMany([usersLandLayer, fieldDataLayer]);
+  // ----------------------------------------------------
+  // map + view
+  // ----------------------------------------------------
+  var map = new Map({
+    basemap: "satellite",
+    layers: [usersLandLayer, fieldDataLayer]
+  });
 
-  // map view
   var view = new MapView({
     container: "viewDiv",
     map: map,
-    center: [-89.4,43.07],
-    zoom: 10
+    center: [-89.4, 43.07],
+    zoom: 9
   });
 
-  // widgets (search top right)
-  var searchWidget = new Search({ view:view });
-  var locateWidget = new Locate({ view:view });
-  var zoomWidget = new Zoom({ view:view });
+  // ----------------------------------------------------
+  // widgets: top-right = search, locate, zoom
+  // ----------------------------------------------------
+  var searchWidget = new Search({
+    view: view
+  });
 
-  view.ui.add(searchWidget,"top-right");
-  view.ui.add(locateWidget,{ position:"top-right", index:1 });
-  view.ui.add(zoomWidget,{ position:"top-right", index:2 });
+  view.ui.add(searchWidget, "top-right");
 
-  // basemap + layers
-  var basemapGallery = new BasemapGallery({ view:view });
-  var layerList = new LayerList({ view:view });
+  var locateWidget = new Locate({
+    view: view
+  });
+
+  view.ui.add(locateWidget, "top-right");
+
+  // move zoom to top-right (under search)
+  view.ui.move("zoom", "top-right");
+
+  // ----------------------------------------------------
+  // widgets: left side tools (basemap, layers, editor)
+  // ----------------------------------------------------
+  var basemapGallery = new BasemapGallery({
+    view: view,
+    source: [
+      { portalItem: { id: "10df2279f9684e4a9f6a7f08febac2a9" } }, // World Imagery
+      { portalItem: { id: "1b243539f4514b6ba35e7d995890db1d" } }  // World Topographic
+    ]
+  });
 
   var basemapExpand = new Expand({
-    view:view,
-    content:basemapGallery
+    view: view,
+    content: basemapGallery,
+    expandTooltip: "Basemaps",
+    collapseTooltip: "Basemaps"
+  });
+
+  view.ui.add(basemapExpand, "top-left");
+
+  var layerList = new LayerList({
+    view: view
   });
 
   var layersExpand = new Expand({
-    view:view,
-    content:layerList
+    view: view,
+    content: layerList,
+    expandTooltip: "Layers",
+    collapseTooltip: "Layers"
   });
 
-  view.ui.add(basemapExpand,"top-left");
-  view.ui.add(layersExpand,"top-left");
+  view.ui.add(layersExpand, "top-left");
 
-  // keep basemap options simple
-  view.when(function(){
-    Promise.all([
-      Basemap.fromId("arcgis-imagery"),
-      Basemap.fromId("arcgis-topographic")
-    ]).then(function(basemaps){
-      basemapGallery.source = basemaps;
-    });
+  var editor = new Editor({
+    view: view
   });
 
-  // editor only used for updating features
-  view.when(function(){
-
-    var editor = new Editor({
-      view:view,
-      allowedWorkflows:["update"],
-      layerInfos:[
-        { layer:usersLandLayer },
-        { layer:fieldDataLayer }
-      ]
-    });
-
-    var editorExpand = new Expand({
-      view:view,
-      content:editor
-    });
-
-    view.ui.add(editorExpand,"top-left");
-
+  var editorExpand = new Expand({
+    view: view,
+    content: editor,
+    expandTooltip: "Edit / Add",
+    collapseTooltip: "Edit / Add"
   });
 
-  // -------------------------
-  // sidebar filters
-  // -------------------------
+  view.ui.add(editorExpand, "top-left");
 
-  var obsFilter = document.getElementById("obsFilter");
-  var statusFilter = document.getElementById("statusFilter");
-  var severityFilter = document.getElementById("severityFilter");
-  var cropFilter = document.getElementById("cropFilter");
+  // ----------------------------------------------------
+  // sidebar filter stuff
+  // ----------------------------------------------------
+  var obsTypeSelect = document.getElementById("obsTypeSelect");
+  var statusSelect = document.getElementById("statusSelect");
+  var severitySelect = document.getElementById("severitySelect");
+  var cropTypeSelect = document.getElementById("cropTypeSelect");
+
   var searchBtn = document.getElementById("searchBtn");
-  var clearBtn = document.getElementById("clearFilters");
+  var clearBtn = document.getElementById("clearBtn");
 
-  // values from AGOL domains
-  var obsTypes = [
-    "Vegetation Health",
-    "Nutrients",
-    "Disease",
-    "Pest",
-    "Soil Quality",
-    "Irrigation",
-    "Erosion",
-    "Infrastructure",
-    "Livestock",
-    "General",
-    "Other"
-  ];
+  function fillSelectFromDomain(selectEl, layer, fieldName) {
+    var f = layer.fields.find(function (fld) { return fld.name === fieldName; });
+    if (!f || !f.domain || !f.domain.codedValues) return;
 
-  var statuses = ["Open","In Progress","Monitoring","Closed"];
+    // wipe old options except the first "All"
+    while (selectEl.options.length > 1) selectEl.remove(1);
 
-  var severityOptions = [
-    { label:"Minimal", code:1 },
-    { label:"Low", code:2 },
-    { label:"Moderate", code:3 },
-    { label:"High", code:4 },
-    { label:"Critical", code:5 }
-  ];
-
-  var cropTypes = [
-    "Corn",
-    "Soybean",
-    "Wheat",
-    "Potatoes",
-    "Alfalfa",
-    "Specialty Crop",
-    "Cover Crop",
-    "Pasture",
-    "Other"
-  ];
-
-  function addOptions(selectEl,values){
-    values.forEach(function(v){
+    f.domain.codedValues.forEach(function (cv) {
       var opt = document.createElement("option");
-      opt.value = v;
-      opt.textContent = v;
+      opt.value = cv.code;
+      opt.textContent = cv.name;
       selectEl.appendChild(opt);
     });
   }
 
-  function addSeverityOptions(selectEl,values){
-    values.forEach(function(v){
-      var opt = document.createElement("option");
-      opt.value = String(v.code);
-      opt.textContent = v.label;
-      selectEl.appendChild(opt);
-    });
+  function applyFilters() {
+    var whereParts = [];
+
+    if (obsTypeSelect.value) whereParts.push("obs_type = '" + obsTypeSelect.value + "'");
+    if (statusSelect.value) whereParts.push("status = '" + statusSelect.value + "'");
+    if (severitySelect.value) whereParts.push("severity = " + severitySelect.value);
+    if (cropTypeSelect.value) whereParts.push("crop_type = '" + cropTypeSelect.value + "'");
+
+    var where = (whereParts.length > 0) ? whereParts.join(" AND ") : "1=1";
+    fieldDataLayer.definitionExpression = where;
   }
 
-  addOptions(obsFilter,obsTypes);
-  addOptions(statusFilter,statuses);
-  addSeverityOptions(severityFilter,severityOptions);
-  addOptions(cropFilter,cropTypes);
-
-  function safeText(txt){
-    return txt.replace("'","''");
+  function clearFilters() {
+    obsTypeSelect.value = "";
+    statusSelect.value = "";
+    severitySelect.value = "";
+    cropTypeSelect.value = "";
+    fieldDataLayer.definitionExpression = "1=1";
   }
 
-  function applyFilters(){
+  searchBtn.addEventListener("click", applyFilters);
+  clearBtn.addEventListener("click", clearFilters);
 
-    var parts = [];
-
-    if(obsFilter.value) parts.push("obs_type = '"+safeText(obsFilter.value)+"'");
-    if(statusFilter.value) parts.push("status = '"+safeText(statusFilter.value)+"'");
-    if(severityFilter.value) parts.push("severity = "+severityFilter.value);
-    if(cropFilter.value) parts.push("crop_type = '"+safeText(cropFilter.value)+"'");
-
-    fieldDataLayer.definitionExpression = parts.length ? parts.join(" AND ") : "1=1";
-
-  }
-
-  searchBtn.addEventListener("click",applyFilters);
-
-  clearBtn.addEventListener("click",function(){
-
-    obsFilter.value="";
-    statusFilter.value="";
-    severityFilter.value="";
-    cropFilter.value="";
-
-    fieldDataLayer.definitionExpression="1=1";
-
-  });
-
-  // -------------------------
-  // add buttons
-  // -------------------------
-
-  var addPointBtn = document.getElementById("addPointBtn");
+  // ----------------------------------------------------
+  // buttons that trigger the Editor workflows
+  // ----------------------------------------------------
+  var addFieldDataBtn = document.getElementById("addFieldDataBtn");
   var addLandBtn = document.getElementById("addLandBtn");
 
-  // temp drawing layer
-  var drawLayer = new GraphicsLayer();
-  map.add(drawLayer);
+  function openEditorForLayer(layer) {
+    // open the editor panel so the user sees the form
+    editorExpand.expanded = true;
 
-  var sketchVM = new SketchViewModel({
-    view:view,
-    layer:drawLayer
+    // close other panels so it's not messy
+    basemapExpand.expanded = false;
+    layersExpand.expanded = false;
+
+    // give it a second to be ready (this avoids some random weirdness)
+    view.when(function () {
+      if (!editor.viewModel) return;
+
+      // pick the first template for that layer
+      // (if there are multiple, ArcGIS will show choices)
+      editor.viewModel.startCreateWorkflowAtFeatureType(layer);
+    });
+  }
+
+  addFieldDataBtn.addEventListener("click", function () {
+    openEditorForLayer(fieldDataLayer);
   });
 
-  // form overlay elements
-  var overlay = document.getElementById("formOverlay");
-  var formTitle = document.getElementById("formTitle");
-  var formBody = document.getElementById("formBody");
-  var formSave = document.getElementById("formSave");
-  var formCancel = document.getElementById("formCancel");
-
-  var currentMode = null;
-  var pendingGeometry = null;
-  var pendingTempGraphic = null;
-
-  function openForm(mode,geom,tempGraphic){
-
-    currentMode = mode;
-    pendingGeometry = geom;
-    pendingTempGraphic = tempGraphic;
-
-    formBody.innerHTML="";
-
-    if(mode==="point"){
-
-      formTitle.textContent="Add Field Data";
-
-      formBody.appendChild(makeInput("Title","fd_title"));
-      formBody.appendChild(makeInput("Observation Type","fd_obs"));
-      formBody.appendChild(makeInput("Status","fd_status"));
-      formBody.appendChild(makeInput("Severity","fd_sev"));
-      formBody.appendChild(makeInput("Crop Type","fd_crop"));
-      formBody.appendChild(makeTextarea("Notes","fd_notes"));
-
-    }
-
-    if(mode==="land"){
-
-      formTitle.textContent="Add Land";
-
-      formBody.appendChild(makeInput("Land Name","land_name"));
-      formBody.appendChild(makeInput("Owner","land_owner"));
-      formBody.appendChild(makeInput("Crop Type","land_crop"));
-      formBody.appendChild(makeInput("Acres","land_acres","number"));
-
-    }
-
-    overlay.style.display="flex";
-
-  }
-
-  function closeForm(){
-
-    overlay.style.display="none";
-
-    if(pendingTempGraphic){
-      drawLayer.remove(pendingTempGraphic);
-    }
-
-    currentMode=null;
-    pendingGeometry=null;
-    pendingTempGraphic=null;
-
-  }
-
-  function makeInput(label,id,type){
-
-    var wrap = document.createElement("div");
-    wrap.className="formRow";
-
-    var l = document.createElement("label");
-    l.textContent=label;
-
-    var i = document.createElement("input");
-    i.id=id;
-    i.type=type||"text";
-
-    wrap.appendChild(l);
-    wrap.appendChild(i);
-
-    return wrap;
-
-  }
-
-  function makeTextarea(label,id){
-
-    var wrap = document.createElement("div");
-    wrap.className="formRow";
-
-    var l = document.createElement("label");
-    l.textContent=label;
-
-    var t = document.createElement("textarea");
-    t.id=id;
-
-    wrap.appendChild(l);
-    wrap.appendChild(t);
-
-    return wrap;
-
-  }
-
-  formCancel.addEventListener("click",function(){
-    closeForm();
+  addLandBtn.addEventListener("click", function () {
+    openEditorForLayer(usersLandLayer);
   });
 
-  // save feature to AGOL
-  formSave.addEventListener("click",function(){
+  // ----------------------------------------------------
+  // auto-calc acres AFTER a polygon is saved
+  // (keeps it simple: we calculate and then update the new feature)
+  // ----------------------------------------------------
+  usersLandLayer.on("edits", function (evt) {
+    // only care about new adds
+    if (!evt || !evt.addedFeatures || evt.addedFeatures.length === 0) return;
 
-    if(!currentMode || !pendingGeometry) return;
+    var added = evt.addedFeatures[0];
+    if (!added || !added.objectId) return;
 
-    if(currentMode==="point"){
+    // pull the geometry we just added (we need it to calc area)
+    usersLandLayer.queryFeatures({
+      objectIds: [added.objectId],
+      returnGeometry: true,
+      outFields: ["*"]
+    }).then(function (res) {
+      if (!res.features || res.features.length === 0) return;
 
-      var g = new Graphic({
-        geometry:pendingGeometry,
-        attributes:{
-          title:document.getElementById("fd_title").value,
-          obs_type:document.getElementById("fd_obs").value,
-          status:document.getElementById("fd_status").value,
-          severity:document.getElementById("fd_sev").value,
-          crop_type:document.getElementById("fd_crop").value,
-          obs_notes:document.getElementById("fd_notes").value
-        }
+      var feat = res.features[0];
+      if (!feat.geometry) return;
+
+      // geodesic area in sq meters -> acres
+      var sqm = Math.abs(geometryEngine.geodesicArea(feat.geometry, "square-meters"));
+      var acres = sqm / 4046.8564224;
+
+      // round a little so it doesn't look crazy
+      acres = Math.round(acres * 100) / 100;
+
+      // update just the acres field
+      usersLandLayer.applyEdits({
+        updateFeatures: [{
+          attributes: {
+            OBJECTID: added.objectId,
+            acres: acres
+          }
+        }]
+      }).catch(function (err) {
+        console.log("acres update failed", err);
       });
-
-      fieldDataLayer.applyEdits({ addFeatures:[g] })
-        .then(function(){ closeForm(); });
-
-    }
-
-    if(currentMode==="land"){
-
-      var g2 = new Graphic({
-        geometry:pendingGeometry,
-        attributes:{
-          land_name:document.getElementById("land_name").value,
-          land_owner:document.getElementById("land_owner").value,
-          crop_type:document.getElementById("land_crop").value,
-          acres:Number(document.getElementById("land_acres").value)
-        }
-      });
-
-      usersLandLayer.applyEdits({ addFeatures:[g2] })
-        .then(function(){ closeForm(); });
-
-    }
-
+    }).catch(function (err) {
+      console.log("query for acres failed", err);
+    });
   });
 
-  // start drawing point
-  addPointBtn.addEventListener("click",function(){
+  // ----------------------------------------------------
+  // once layers load, populate filter dropdowns from domains
+  // ----------------------------------------------------
+  view.when(function () {
+    // these come from your hosted layer domains
+    fillSelectFromDomain(obsTypeSelect, fieldDataLayer, "obs_type");
+    fillSelectFromDomain(statusSelect, fieldDataLayer, "status");
+    fillSelectFromDomain(severitySelect, fieldDataLayer, "severity");
 
-    drawLayer.removeAll();
-    view.popup.close();
-    sketchVM.cancel();
-
-    sketchVM.create("point");
-
-  });
-
-  // start drawing polygon
-  addLandBtn.addEventListener("click",function(){
-
-    drawLayer.removeAll();
-    view.popup.close();
-    sketchVM.cancel();
-
-    sketchVM.create("polygon");
-
-  });
-
-  // when sketch finishes
-  sketchVM.on("create",function(evt){
-
-    if(evt.state!=="complete") return;
-
-    var tempGraphic = evt.graphic;
-    var geom = tempGraphic.geometry;
-
-    if(geom.type==="point"){
-      openForm("point",geom,tempGraphic);
-    }
-
-    if(geom.type==="polygon"){
-      openForm("land",geom,tempGraphic);
-    }
-
+    // crop_type exists on both layers, but we just use fieldData domain for filtering
+    fillSelectFromDomain(cropTypeSelect, fieldDataLayer, "crop_type");
   });
 
 });
