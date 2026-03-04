@@ -5,7 +5,7 @@
   <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no" />
   <title>Agrow</title>
 
-  <!-- ArcGIS JS CSS -->
+  <!-- ArcGIS JS (same as labs) -->
   <link rel="stylesheet" href="https://js.arcgis.com/4.26/esri/themes/light/main.css" />
   <script src="https://js.arcgis.com/4.26/"></script>
 
@@ -27,14 +27,16 @@
     /* sidebar */
     #sidebar {
       width: 280px;
-      padding: 15px;
-      background-color: #f7f7f7;
+      padding: 16px;
+      background: #f7f7f7;
       border-right: 1px solid #ddd;
       overflow-y: auto;
     }
 
     #sidebar h2 {
-      margin-top: 0;
+      margin: 0 0 14px 0;
+      font-size: 26px;
+      font-weight: 700;
     }
 
     #sidebar label {
@@ -49,18 +51,31 @@
       margin-top: 5px;
     }
 
-    #clearFilters {
-      margin-top: 15px;
+    .btn {
+      margin-top: 12px;
       width: 100%;
-      padding: 8px;
-      background-color: #4CAF50;
-      color: white;
+      padding: 9px;
       border: none;
       cursor: pointer;
+      font-weight: 600;
+    }
+
+    #searchBtn {
+      background: #2f7edb;
+      color: white;
+    }
+
+    #searchBtn:hover {
+      background: #2568b6;
+    }
+
+    #clearFilters {
+      background: #4CAF50;
+      color: white;
     }
 
     #clearFilters:hover {
-      background-color: #45a049;
+      background: #45a049;
     }
 
     /* map */
@@ -92,7 +107,7 @@
 
     <!-- Sidebar Filters -->
     <div id="sidebar">
-      <h2>Agrow Filters</h2>
+      <h2>Search Filters</h2>
 
       <label>Observation Type</label>
       <select id="obsFilter">
@@ -114,7 +129,8 @@
         <option value="">All</option>
       </select>
 
-      <button id="clearFilters">Clear Filters</button>
+      <button id="searchBtn" class="btn">Search</button>
+      <button id="clearFilters" class="btn">Clear Filters</button>
     </div>
 
     <!-- Map -->
@@ -122,7 +138,6 @@
 
   </div>
 
-  <!-- main JS -->
   <script src="js/main.js"></script>
 </body>
 </html>
