@@ -1,5 +1,5 @@
 // agrow midterm - main.js
-// By Ray Weigand
+// map + hosted layers + editor + a simple filter panel
 
 require([
   "esri/config",
@@ -7,88 +7,104 @@ require([
   "esri/views/MapView",
 
   "esri/layers/FeatureLayer",
-  "esri/layers/TileLayer",
+  "esri/Basemap",
 
-  "esri/widgets/Locate",
   "esri/widgets/Search",
+  "esri/widgets/Locate",
+  "esri/widgets/Zoom",
+
   "esri/widgets/BasemapGallery",
   "esri/widgets/LayerList",
+  "esri/widgets/Editor",
   "esri/widgets/Expand",
-  "esri/widgets/Editor"
+
+  "esri/symbols/SimpleMarkerSymbol",
+  "esri/renderers/SimpleRenderer"
 ], function (
   esriConfig,
   Map,
   MapView,
 
   FeatureLayer,
-  TileLayer,
+  Basemap,
 
-  Locate,
   Search,
+  Locate,
+  Zoom,
+
   BasemapGallery,
   LayerList,
+  Editor,
   Expand,
-  Editor
+
+  SimpleMarkerSymbol,
+  SimpleRenderer
 ) {
 
-  // ---------------------------
-  // API key
-  // ---------------------------
-  esriConfig.apiKey = "AAPTxy8BH1VEsoebNVZXo8HurEzkBozXZgPgjPozCzklawWD863C9mArHp4QeXfLaiy8L2BJTmm_eFlkRBmh-rS8f86DIaVxCZv1qDyzDjRyrQtKAoG97CplbDXiwWMA2bYqtEAxH9-MHlA3tDGSjUp93BMOHIaqXguOZxzW8cFVKszpoaoEbOPaECd9FiSLY6Rg-2FBhrb9bssxhS2Mh6EcsLusRR-qwO3qSJK5S8_0-lU3r-pdC0akyfo2hyekjELXAT1_Mj7DoXAA";
+  // api key (same setup as labs)
+  esriConfig.apiKey = "PASTE_YOUR_API_KEY_HERE";
 
-  // ---------------------------
-  // AGOL layer URLs
-  // ---------------------------
-  var fieldDataUrl =
-    "https://services.arcgis.com/HRPe58bUyBqyyiCt/arcgis/rest/services/field_data/FeatureServer/0";
-
+  // hosted layer urls
   var usersLandUrl =
     "https://services.arcgis.com/HRPe58bUyBqyyiCt/arcgis/rest/services/Users_Land/FeatureServer/0";
 
-  // ---------------------------
-  // map + layers
-  // ---------------------------
+  var fieldDataUrl =
+    "https://services.arcgis.com/HRPe58bUyBqyyiCt/arcgis/rest/services/field_data/FeatureServer/0";
+
+  // start map on imagery
   var map = new Map({
     basemap: "arcgis-imagery"
   });
 
+  // land polygons
   var usersLandLayer = new FeatureLayer({
     url: usersLandUrl,
     title: "My Land",
-    outFields: ["*"]
+    outFields: ["*"],
+    popupTemplate: {
+      title: "{land_name}",
+      content: [{
+        type: "fields",
+        fieldInfos: [
+          { fieldName: "land_owner", label: "Owner" },
+          { fieldName: "crop_type", label: "Crop Type" },
+          { fieldName: "acres", label: "Acres" }
+        ]
+      }]
+    }
+  });
+
+  // points (make them easier to see on imagery)
+  var pointSym = new SimpleMarkerSymbol({
+    style: "circle",
+    size: 10,
+    color: [0, 170, 255, 1],
+    outline: { color: [255, 255, 255, 1], width: 1.5 }
   });
 
   var fieldDataLayer = new FeatureLayer({
     url: fieldDataUrl,
     title: "Field Data",
-    outFields: ["*"]
+    outFields: ["*"],
+    renderer: new SimpleRenderer({ symbol: pointSym }),
+    popupTemplate: {
+      title: "{title}",
+      content: [{
+        type: "fields",
+        fieldInfos: [
+          { fieldName: "obs_type", label: "Observation Type" },
+          { fieldName: "status", label: "Status" },
+          { fieldName: "severity", label: "Severity (1–5)" },
+          { fieldName: "crop_type", label: "Crop Type" },
+          { fieldName: "obs_notes", label: "Notes" }
+        ]
+      }]
+    }
   });
 
   map.addMany([usersLandLayer, fieldDataLayer]);
 
-  // ---------------------------
-  // insight overlays (toggle on/off)
-  // ---------------------------
-  var hillshadeLayer = new TileLayer({
-    url: "https://services.arcgisonline.com/arcgis/rest/services/Elevation/World_Hillshade/MapServer",
-    title: "Hillshade",
-    opacity: 0.55,
-    visible: false
-  });
-
-  // slope overlay is a placeholder for now (keeping midterm scope realistic)
-  var slopeLayer = new TileLayer({
-    url: "https://services.arcgisonline.com/arcgis/rest/services/Elevation/World_Hillshade/MapServer",
-    title: "Slope",
-    opacity: 0.0,
-    visible: false
-  });
-
-  map.addMany([hillshadeLayer, slopeLayer]);
-
-  // ---------------------------
   // view
-  // ---------------------------
   var view = new MapView({
     container: "viewDiv",
     map: map,
@@ -96,50 +112,62 @@ require([
     zoom: 10
   });
 
-  // ---------------------------
-  // widgets
-  // ---------------------------
-  var locateWidget = new Locate({ view: view });
+  // top-right: search, then locate + zoom under it
   var searchWidget = new Search({ view: view });
+  var locateWidget = new Locate({ view: view });
+  var zoomWidget = new Zoom({ view: view });
 
-  var basemapGallery = new BasemapGallery({
-    view: view,
-    source: [
-      { id: "arcgis-imagery", title: "Imagery" },
-      { id: "arcgis-topographic", title: "Topographic" }
-    ]
-  });
+  view.ui.add(searchWidget, "top-right");
+  view.ui.add(locateWidget, { position: "top-right", index: 1 });
+  view.ui.add(zoomWidget, { position: "top-right", index: 2 });
 
+  // left stack tools: basemap -> layers -> editor
+  var basemapGallery = new BasemapGallery({ view: view });
   var layerList = new LayerList({ view: view });
 
-  var bgExpand = new Expand({
+  // tooltips so hover isn't just "Expand"
+  var basemapExpand = new Expand({
     view: view,
     content: basemapGallery,
-    expanded: false
+    expanded: false,
+    expandTooltip: "Basemaps",
+    collapseTooltip: "Basemaps"
   });
 
-  var llExpand = new Expand({
+  var layersExpand = new Expand({
     view: view,
     content: layerList,
-    expanded: false
+    expanded: false,
+    expandTooltip: "Layers",
+    collapseTooltip: "Layers"
   });
 
-  view.ui.add(locateWidget, "top-left");
-  view.ui.add(bgExpand, "top-left");
-  view.ui.add(llExpand, "top-left");
-  view.ui.add(searchWidget, "top-right");
+  view.ui.add(basemapExpand, "top-left");
+  view.ui.add(layersExpand, "top-left");
 
-  // ---------------------------
-  // editor (add + update)
-  // ---------------------------
+  // fix basemap white-screen + thumbnails by using real basemap objects
+  // also add Light Gray Canvas as a clean option
+  view.when(function () {
+    Promise.all([
+      Basemap.fromId("arcgis-imagery"),
+      Basemap.fromId("arcgis-topographic"),
+      Basemap.fromId("arcgis-light-gray")
+    ]).then(function (basemaps) {
+      basemapGallery.source = basemaps;
+    });
+  });
+
+  // editor
   view.when(function () {
     var editor = new Editor({
       view: view,
+      allowedWorkflows: ["create", "update"],
       layerInfos: [
         {
           layer: usersLandLayer,
+          label: "Add Land",
           formTemplate: {
-            title: "Add / Edit Land",
+            title: "Add Land",
             elements: [
               { type: "field", fieldName: "land_name", label: "Land Name" },
               { type: "field", fieldName: "land_owner", label: "Owner" },
@@ -150,8 +178,9 @@ require([
         },
         {
           layer: fieldDataLayer,
+          label: "Add Field Data",
           formTemplate: {
-            title: "Add / Edit Field Data",
+            title: "Add Field Data",
             elements: [
               { type: "field", fieldName: "title", label: "Title" },
               { type: "field", fieldName: "obs_type", label: "Observation Type" },
@@ -169,22 +198,25 @@ require([
     var editorExpand = new Expand({
       view: view,
       content: editor,
-      expanded: false
+      expanded: false,
+      expandTooltip: "Editor",
+      collapseTooltip: "Editor"
     });
 
     view.ui.add(editorExpand, "top-left");
   });
 
   // ---------------------------
-  // sidebar filters (for points)
+  // sidebar filters
+  // (these match your domain values)
   // ---------------------------
   var obsFilter = document.getElementById("obsFilter");
   var statusFilter = document.getElementById("statusFilter");
   var severityFilter = document.getElementById("severityFilter");
   var cropFilter = document.getElementById("cropFilter");
+  var searchBtn = document.getElementById("searchBtn");
   var clearBtn = document.getElementById("clearFilters");
 
-  // match the domains you set in AGOL
   var obsTypes = [
     "Vegetation Health",
     "Nutrients",
@@ -201,7 +233,6 @@ require([
 
   var statuses = ["Open", "In Progress", "Monitoring", "Closed"];
 
-  // label -> code (stored value is 1-5)
   var severityOptions = [
     { label: "Minimal", code: 1 },
     { label: "Low", code: 2 },
@@ -234,8 +265,8 @@ require([
   function addSeverityOptions(selectEl, values) {
     values.forEach(function (v) {
       var opt = document.createElement("option");
-      opt.value = String(v.code);
-      opt.textContent = v.label;
+      opt.value = String(v.code);      // stored value is numeric (1-5)
+      opt.textContent = v.label;       // displayed label
       selectEl.appendChild(opt);
     });
   }
@@ -250,34 +281,28 @@ require([
   }
 
   function applyFilters() {
-    var whereParts = [];
+    var parts = [];
 
     if (obsFilter.value) {
-      whereParts.push("obs_type = '" + safeText(obsFilter.value) + "'");
+      parts.push("obs_type = '" + safeText(obsFilter.value) + "'");
     }
-
     if (statusFilter.value) {
-      whereParts.push("status = '" + safeText(statusFilter.value) + "'");
+      parts.push("status = '" + safeText(statusFilter.value) + "'");
     }
-
     if (severityFilter.value) {
-      whereParts.push("severity = " + severityFilter.value);
+      parts.push("severity = " + severityFilter.value);
     }
-
     if (cropFilter.value) {
-      whereParts.push("crop_type = '" + safeText(cropFilter.value) + "'");
+      parts.push("crop_type = '" + safeText(cropFilter.value) + "'");
     }
 
-    fieldDataLayer.definitionExpression = whereParts.length
-      ? whereParts.join(" AND ")
-      : "1=1";
+    fieldDataLayer.definitionExpression = parts.length ? parts.join(" AND ") : "1=1";
   }
 
-  obsFilter.addEventListener("change", applyFilters);
-  statusFilter.addEventListener("change", applyFilters);
-  severityFilter.addEventListener("change", applyFilters);
-  cropFilter.addEventListener("change", applyFilters);
+  // "Search" applies filters (so it feels intentional)
+  searchBtn.addEventListener("click", applyFilters);
 
+  // clear resets everything
   clearBtn.addEventListener("click", function () {
     obsFilter.value = "";
     statusFilter.value = "";
